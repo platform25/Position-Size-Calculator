@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Risk Calculator (Pips Version)</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --accent-color: #0056b3;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .calculator-card {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--accent-color);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #004494;
+        }
+
+        .results-container {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            display: none;
+        }
+
+        .result-step {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .step-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .step-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .final-lot-size {
+            color: var(--accent-color);
+            font-size: 1.5em;
+        }
+
+        .formula-note {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-card">
+    <h2>Position Size Calculator</h2>
+
+    <div class="input-group">
+        <label for="currencySymbol">Account Currency</label>
+        <select id="currencySymbol">
+            <option value="R">ZAR (R)</option>
+            <option value="$">USD ($)</option>
+            <option value="€">EUR (€)</option>
+            <option value="£">GBP (£)</option>
+            <option value="¥">JPY (¥)</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="balance">Account Balance</label>
+        <input type="number" id="balance" placeholder="e.g., 15000" step="any">
+    </div>
+
+    <div class="input-group">
+        <label for="riskPercent">Risk Percentage (%)</label>
+        <input type="number" id="riskPercent" placeholder="e.g., 1 or 2" step="0.1" value="1">
+    </div>
+
+    <div class="input-group">
+        <label for="stopLossPips">Step 2: Stop Loss Distance (Pips)</label>
+        <input type="number" id="stopLossPips" placeholder="e.g., 20" step="1">
+        <div class="formula-note">Calculator converts Pips to Points automatically (1 Pip = 10 Points).</div>
+    </div>
+
+    <button onclick="calculateSize()">Calculate Lot Size</button>
+
+    <div class="results-container" id="resultsSection">
+        <div class="result-step">
+            <div class="step-title">Step 1: Risk Amount</div>
+            <div class="step-value" id="riskAmountResult">0.00</div>
+        </div>
+
+        <div class="result-step">
+            <div class="step-title">Step 3: Math Formula Used</div>
+            <div class="step-value" id="mathCalculation">0 ÷ 0 ÷ 2</div>
+            <div class="formula-note">*Formula: Risk ÷ Points ÷ 2</div>
+        </div>
+
+        <div class="result-step">
+            <div class="step-title">Step 4: MT4/MT5 Lot Size</div>
+            <div class="step-value final-lot-size" id="lotSizeResult">0.00 Lots</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function calculateSize() {
+        // 1. Get Inputs
+        const currencySym = document.getElementById('currencySymbol').value;
+        const balanceStr = document.getElementById('balance').value;
+        const riskPercentStr = document.getElementById('riskPercent').value;
+        const stopLossPipsStr = document.getElementById('stopLossPips').value; // Get Pips
+
+        // Validate inputs
+        if (balanceStr === "" || riskPercentStr === "" || stopLossPipsStr === "") {
+            alert("Please fill in all fields.");
+            return;
+        }
+
+        // Convert strings to numbers
+        const balance = parseFloat(balanceStr);
+        const riskPercent = parseFloat(riskPercentStr);
+        const stopLossPips = parseFloat(stopLossPipsStr);
+
+        if (balance <= 0 || riskPercent <= 0 || stopLossPips <= 0) {
+             alert("Please ensure all values are greater than zero.");
+             return;
+        }
+
+        // --- Step 1: Risk Amount ---
+        const riskAmount = balance * (riskPercent / 100);
+
+        // --- CONVERSION: Pips to Points ---
+        // The image formula uses Points, so we multiply Pips by 10.
+        const stopLossPoints = stopLossPips * 10;
+
+        // --- Step 3 & 4: Formula from Image ---
+        // Formula: Risk / Points / 2
+        let rawLotSize = riskAmount / stopLossPoints / 2;
+
+        // Round down to 2 decimal places
+        const finalLotSize = Math.floor(rawLotSize * 100) / 100;
+
+        // --- Update UI ---
+        document.getElementById('resultsSection').style.display = 'block';
+
+        document.getElementById('riskAmountResult').textContent =
+            `${currencySym}${riskAmount.toFixed(2)} (${riskPercent}%)`;
+
+        // We show the points in the math breakdown so you can check accuracy
+        document.getElementById('mathCalculation').textContent =
+            `${currencySym}${riskAmount.toFixed(2)} ÷ ${stopLossPoints} Points (${stopLossPips} Pips) ÷ 2`;
+
+        document.getElementById('lotSizeResult').textContent =
+            `${finalLotSize.toFixed(2)} Lots`;
+    }
+</script>
+
+</body>
+</html>
